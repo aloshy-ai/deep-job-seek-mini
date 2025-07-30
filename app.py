@@ -243,55 +243,54 @@ def create_interface():
         gr.Markdown("# 🚀 Deep Job Seek Mini")
         gr.Markdown("*AI-powered resume generation with HuggingFace models*")
         
-        # Main interface
-        with gr.Row():
-            with gr.Column(scale=1):
-                job_input = gr.Textbox(
-                    label="📝 Job Description",
-                    placeholder="Paste the job description here...",
-                    lines=10,
-                    max_lines=15
-                )
-                
-                generate_btn = gr.Button(
-                    "✨ Generate Tailored Resume", 
-                    variant="primary",
-                    size="lg"
-                )
-                
-                status_output = gr.Textbox(
-                    label="Status",
-                    interactive=False,
-                    max_lines=2
-                )
-            
-            with gr.Column(scale=2):
-                resume_output = gr.JSON(
-                    label="📄 Generated Resume (JSON Resume Schema)",
-                    show_label=True
-                )
-        
-        gr.Markdown("---") # Separator for the new section
+        with gr.Tabs():
+            with gr.TabItem("Generate Tailored Resume"): # Main interface tab
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        job_input = gr.Textbox(
+                            label="📝 Job Description",
+                            placeholder="Paste the job description here...",
+                            lines=10,
+                            max_lines=15
+                        )
+                        
+                        generate_btn = gr.Button(
+                            "✨ Generate Tailored Resume", 
+                            variant="primary",
+                            size="lg"
+                        )
+                        
+                        status_output = gr.Textbox(
+                            label="Status",
+                            interactive=False,
+                            max_lines=2
+                        )
+                    
+                    with gr.Column(scale=2):
+                        resume_output = gr.JSON(
+                            label="📄 Generated Resume (JSON Resume Schema)",
+                            show_label=True
+                        )
 
-        with gr.Column(): # Use a separate column for the original resume section
-            gr.Markdown("## 📄 Your Original Resume")
-            original_resume_input = gr.Textbox(
-                label="Original Resume (Plaintext, Markdown, or JSON)",
-                placeholder="Paste your original resume here...",
-                lines=10,
-                max_lines=20
-            )
+            with gr.TabItem("Update Original Resume"): # New tab for original resume input
+                gr.Markdown("## 📄 Provide Your Original Resume")
+                original_resume_input = gr.Textbox(
+                    label="Original Resume (Plaintext, Markdown, or JSON)",
+                    placeholder="Paste your original resume here...",
+                    lines=15,
+                    max_lines=30
+                )
 
-            with gr.Row():
-                update_resume_btn = gr.Button(
-                    "⬆️ Update Original Resume",
-                    variant="secondary",
-                    size="lg"
-                )
-                clear_resume_btn = gr.ClearButton(
-                    value="Clear Resume Input",
-                    components=[original_resume_input]
-                )
+                with gr.Row():
+                    update_resume_btn = gr.Button(
+                        "⬆️ Update Original Resume",
+                        variant="secondary",
+                        size="lg"
+                    )
+                    clear_resume_btn = gr.ClearButton(
+                        value="Clear Resume Input",
+                        components=[original_resume_input]
+                    )
         
         # Examples
         gr.Markdown("## 💡 Example Job Descriptions")
