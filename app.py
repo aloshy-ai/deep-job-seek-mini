@@ -273,26 +273,25 @@ def create_interface():
         
         gr.Markdown("---") # Separator for the new section
 
-        with gr.Row():
-            with gr.Column(scale=1):
-                gr.Markdown("## 📄 Your Original Resume")
-                original_resume_input = gr.Textbox(
-                    label="Original Resume (Plaintext, Markdown, or JSON)",
-                    placeholder="Paste your original resume here...",
-                    lines=10,
-                    max_lines=20
-                )
+        with gr.Column(): # Use a separate column for the original resume section
+            gr.Markdown("## 📄 Your Original Resume")
+            original_resume_input = gr.Textbox(
+                label="Original Resume (Plaintext, Markdown, or JSON)",
+                placeholder="Paste your original resume here...",
+                lines=10,
+                max_lines=20
+            )
 
-                with gr.Row():
-                    update_resume_btn = gr.Button(
-                        "⬆️ Update Original Resume",
-                        variant="secondary",
-                        size="lg"
-                    )
-                    clear_resume_btn = gr.ClearButton(
-                        value="Clear Resume Input",
-                        components=[original_resume_input]
-                    )
+            with gr.Row():
+                update_resume_btn = gr.Button(
+                    "⬆️ Update Original Resume",
+                    variant="secondary",
+                    size="lg"
+                )
+                clear_resume_btn = gr.ClearButton(
+                    value="Clear Resume Input",
+                    components=[original_resume_input]
+                )
         
         # Examples
         gr.Markdown("## 💡 Example Job Descriptions")
