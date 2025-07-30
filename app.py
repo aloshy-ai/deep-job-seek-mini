@@ -12,10 +12,13 @@ import numpy as np
 from transformers import pipeline, AutoTokenizer, AutoModelForCausalLM
 import torch
 from resume_data import RESUME_DATABASE
-from utils import build_resume_json, extract_key_requirements
+from utils import build_resume_json, extract_key_requirements, parse_resume_text, validate_json_resume
 
 # Global model cache
 _models_cache = None
+
+# Global variable for the current resume database
+_current_resume_database = RESUME_DATABASE.copy()
 
 def load_models():
     """Load and cache HuggingFace models"""
@@ -48,6 +51,9 @@ def load_models():
 def find_relevant_experience(job_description, embedding_model, top_k=5):
     """Find most relevant resume experiences using semantic search"""
     
+    # Use the global current resume database
+    database = _current_resume_database
+    
     # Get job description embedding
     job_embedding = embedding_model.encode([job_description])
     
@@ -55,7 +61,7 @@ def find_relevant_experience(job_description, embedding_model, top_k=5):
     experiences = []
     embeddings = []
     
-    for person in RESUME_DATABASE:
+    for person in database:
         for exp in person.get('work', []):
             experiences.append({
                 'person': person['basics']['name'],
@@ -81,11 +87,23 @@ def find_relevant_experience(job_description, embedding_model, top_k=5):
     
     return []
 
-def generate_resume_content(job_description, relevant_experiences, generator):
+def generate_resume_content(job_description, relevant_experiences, generator, user_resume=None):
     """Generate tailored resume content using HuggingFace models"""
     
     # Extract key requirements from job description
     requirements = extract_key_requirements(job_description)
+    
+    # Use user resume basics if provided
+    if user_resume and user_resume.get('basics'):
+        basics = user_resume['basics'].copy()
+        basics['summary'] = generate_professional_summary(job_description, requirements, generator)
+    else:
+        basics = {
+            "name": "AI-Generated Candidate",
+            "email": "candidate@example.com", 
+            "phone": "+1-555-0123",
+            "summary": generate_professional_summary(job_description, requirements, generator)
+        }
     
     # Build base resume structure
     resume = {
@@ -95,12 +113,7 @@ def generate_resume_content(job_description, relevant_experiences, generator):
             "model": "HuggingFace/gpt2",
             "source": "Deep Job Seek Mini"
         },
-        "basics": {
-            "name": "AI-Generated Candidate",
-            "email": "candidate@example.com", 
-            "phone": "+1-555-0123",
-            "summary": generate_professional_summary(job_description, requirements, generator)
-        },
+        "basics": basics,
         "work": [],
         "skills": [],
         "projects": [],
@@ -183,6 +196,29 @@ def generate_resume(job_description, progress=gr.Progress()):
     except Exception as e:
         return None, f"❌ Error generating resume: {str(e)}"
 
+def handle_resume_update(original_resume_text):
+    """Handle updating the original resume in the database"""
+    global _current_resume_database
+
+    if not original_resume_text.strip():
+        return "", "Please paste your original resume to update." # Clear output and show error
+
+    try:
+        # Attempt to parse the resume text
+        parsed_resume = parse_resume_text(original_resume_text)
+
+        # Validate the parsed resume
+        if not validate_json_resume(parsed_resume):
+            return "", "❌ Invalid resume format. Please ensure it's a valid JSON Resume or well-structured text/markdown." # Clear output and show error
+
+        # If valid, replace the first entry in the database with the new resume
+        # For simplicity, we'll replace the first entry. In a real app, you might add/merge.
+        _current_resume_database[0] = parsed_resume
+        return json.dumps(parsed_resume, indent=2), "✅ Original resume updated successfully!"
+
+    except Exception as e:
+        return "", f"❌ Error processing resume: {str(e)}" # Clear output and show error
+
 # Create Gradio interface
 def create_interface():
     """Create the Gradio interface"""
@@ -228,6 +264,21 @@ def create_interface():
                     interactive=False,
                     max_lines=2
                 )
+
+                gr.Markdown("---") # Separator
+
+                original_resume_input = gr.Textbox(
+                    label="📄 Original Resume (Plaintext, Markdown, or JSON)",
+                    placeholder="Paste your original resume here...",
+                    lines=10,
+                    max_lines=20
+                )
+
+                update_resume_btn = gr.Button(
+                    "⬆️ Update Original Resume",
+                    variant="secondary",
+                    size="lg"
+                )
                 
             with gr.Column(scale=2):
                 resume_output = gr.JSON(
@@ -256,6 +307,12 @@ def create_interface():
             inputs=[job_input],
             outputs=[resume_output, status_output],
             show_progress=True
+        )
+
+        update_resume_btn.click(
+            fn=handle_resume_update,
+            inputs=[original_resume_input],
+            outputs=[resume_output, status_output] # Output to the same JSON and status fields
         )
         
         # Footer with branding

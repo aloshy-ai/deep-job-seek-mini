@@ -176,24 +176,160 @@ def format_resume_for_display(resume: Dict[str, Any]) -> str:
     return "\n".join(output)
 
 def validate_json_resume(resume: Dict[str, Any]) -> bool:
-    """Validate if resume follows JSON Resume schema"""
+    """Validate if resume follows JSON Resume schema with essential fields"""
     
-    required_fields = ["basics"]
-    optional_fields = ["work", "skills", "projects", "education", "volunteer", "awards", "publications"]
+    # Check for basic structure
+    if not isinstance(resume, dict):
+        return False
     
-    # Check required fields
-    for field in required_fields:
-        if field not in resume:
-            return False
-    
-    # Validate basics section
-    basics = resume.get("basics", {})
+    # Check for 'basics' section
+    basics = resume.get("basics")
     if not isinstance(basics, dict):
         return False
     
-    # Check work experience format
-    work = resume.get("work", [])
-    if work and not isinstance(work, list):
+    # Check essential fields within 'basics'
+    if not basics.get("name") or not isinstance(basics["name"], str):
+        return False
+    if not basics.get("email") or not isinstance(basics["email"], str):
         return False
     
+    # Check for 'work' section and if it's a non-empty list
+    work_experiences = resume.get("work")
+    if not isinstance(work_experiences, list) or not work_experiences:
+        return False
+    
+    # Optionally, you can add more detailed validation for work experiences here
+    # For example, checking if each work entry has 'name' and 'position'
+    for job in work_experiences:
+        if not isinstance(job, dict) or not job.get("name") or not job.get("position"):
+            return False
+            
     return True
+
+def parse_resume_text(resume_text: str) -> Dict[str, Any]:
+    """Parse plain text, markdown, or JSON resume into structured JSON Resume format"""
+    
+    if not resume_text.strip():
+        return {}
+    
+    # Try parsing as JSON first
+    try:
+        json_resume = json.loads(resume_text)
+        if validate_json_resume(json_resume):
+            return json_resume
+    except json.JSONDecodeError:
+        pass # Not a valid JSON, proceed to text parsing
+
+    lines = [line.strip() for line in resume_text.split('\n') if line.strip()]
+    
+    # Initialize resume structure
+    resume = {
+        "basics": {
+            "name": "User Candidate",
+            "email": "user@example.com",
+            "phone": "+1-555-0123",
+            "summary": ""
+        },
+        "work": [],
+        "skills": [],
+        "projects": [],
+        "education": []
+    }
+    
+    current_section = None
+    current_item = {}
+    
+    # Keywords to identify sections
+    section_keywords = {
+        'experience': 'work',
+        'work': 'work', 
+        'employment': 'work',
+        'skills': 'skills',
+        'projects': 'projects',
+        'education': 'education',
+        'summary': 'summary',
+        'about': 'summary'
+    }
+    
+    # Extract name from first line if it looks like a name
+    if lines and len(lines[0].split()) <= 4 and not any(char.isdigit() for char in lines[0]):
+        resume["basics"]["name"] = lines[0]
+        lines = lines[1:]
+    
+    # Extract email and phone
+    for i, line in enumerate(lines[:5]):  # Check first 5 lines
+        if '@' in line and '.' in line:
+            resume["basics"]["email"] = line
+        elif any(char.isdigit() for char in line) and ('+' in line or '-' in line or '(' in line):
+            resume["basics"]["phone"] = line
+    
+    # Parse content
+    for line in lines:
+        line_lower = line.lower()
+        
+        # Check if this line starts a new section
+        section_found = None
+        for keyword, section in section_keywords.items():
+            if keyword in line_lower and (line_lower.startswith(keyword) or line_lower.endswith(':')):
+                section_found = section
+                break
+        
+        if section_found:
+            current_section = section_found
+            if section_found == 'summary':
+                continue
+        elif current_section == 'summary':
+            if resume["basics"]["summary"]:
+                resume["basics"]["summary"] += " " + line
+            else:
+                resume["basics"]["summary"] = line
+        elif current_section == 'work':
+            # Try to parse work experience
+            if any(keyword in line_lower for keyword in ['engineer', 'developer', 'manager', 'analyst', 'specialist', 'director']):
+                if current_item and 'position' in current_item:
+                    resume["work"].append(current_item)
+                current_item = {
+                    "position": line,
+                    "name": "Company Name",
+                    "summary": "",
+                    "highlights": []
+                }
+            elif current_item and ('company' in line_lower or 'corp' in line_lower or 'inc' in line_lower):
+                current_item["name"] = line
+            elif current_item and line.startswith('•') or line.startswith('-'):
+                current_item["highlights"].append(line.lstrip('•- '))
+            elif current_item and len(line) > 20:
+                current_item["summary"] = line
+        elif current_section == 'skills':
+            # Parse skills - could be comma-separated or bullet points
+            if ',' in line:
+                skills = [skill.strip() for skill in line.split(',')]
+                resume["skills"].extend(skills)
+            elif line.startswith('•') or line.startswith('-'):
+                resume["skills"].append(line.lstrip('•- '))
+            else:
+                resume["skills"].append(line)
+        elif current_section == 'projects':
+            if line and not line.startswith('•') and not line.startswith('-'):
+                if current_item and 'name' in current_item:
+                    resume["projects"].append(current_item)
+                current_item = {
+                    "name": line,
+                    "description": "",
+                    "highlights": []
+                }
+            elif current_item and (line.startswith('•') or line.startswith('-')):
+                current_item["highlights"].append(line.lstrip('•- '))
+            elif current_item and len(line) > 10:
+                current_item["description"] = line
+    
+    # Add any remaining item
+    if current_item and current_section == 'work' and 'position' in current_item:
+        resume["work"].append(current_item)
+    elif current_item and current_section == 'projects' and 'name' in current_item:
+        resume["projects"].append(current_item)
+    
+    # Clean up skills list
+    resume["skills"] = list(set([skill for skill in resume["skills"] if skill and len(skill) < 50]))[:15]
+    
+    return resume
