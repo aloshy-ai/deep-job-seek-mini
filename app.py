@@ -270,15 +270,20 @@ def create_interface():
                 original_resume_input = gr.Textbox(
                     label="📄 Original Resume (Plaintext, Markdown, or JSON)",
                     placeholder="Paste your original resume here...",
-                    lines=10,
-                    max_lines=20
+                    lines=5, # Reduced lines for better visibility
+                    max_lines=10 # Reduced max_lines
                 )
 
-                update_resume_btn = gr.Button(
-                    "⬆️ Update Original Resume",
-                    variant="secondary",
-                    size="lg"
-                )
+                with gr.Row(): # Group buttons in a row
+                    update_resume_btn = gr.Button(
+                        "⬆️ Update Original Resume",
+                        variant="secondary",
+                        size="lg"
+                    )
+                    clear_resume_btn = gr.ClearButton(
+                        value="Clear Resume Input",
+                        components=[original_resume_input]
+                    )
                 
             with gr.Column(scale=2):
                 resume_output = gr.JSON(
