@@ -198,30 +198,37 @@ def generate_resume(job_description, progress=gr.Progress()):
 
 def handle_resume_update(original_resume_text):
     """Handle updating the original resume in the database"""
+    print(f"handle_resume_update called with text length: {len(original_resume_text)}")
     global _current_resume_database
 
     if not original_resume_text.strip():
+        print("Original resume text is empty.")
         return "", "Please paste your original resume to update." # Clear output and show error
 
     try:
         # Attempt to parse the resume text
         parsed_resume = parse_resume_text(original_resume_text)
+        print(f"Parsed resume: {parsed_resume}")
 
         # Validate the parsed resume
         if not validate_json_resume(parsed_resume):
+            print("Invalid resume format detected.")
             return "", "❌ Invalid resume format. Please ensure it's a valid JSON Resume or well-structured text/markdown." # Clear output and show error
 
         # If valid, replace the first entry in the database with the new resume
         # For simplicity, we'll replace the first entry. In a real app, you might add/merge.
         _current_resume_database[0] = parsed_resume
+        print("Original resume updated successfully in database.")
         return json.dumps(parsed_resume, indent=2), "✅ Original resume updated successfully!"
 
     except Exception as e:
+        print(f"Error in handle_resume_update: {e}")
         return "", f"❌ Error processing resume: {str(e)}" # Clear output and show error
 
 # Create Gradio interface
 def create_interface():
     """Create the Gradio interface"""
+    print("create_interface called.")
     
     # Custom CSS for branding
     css = """
