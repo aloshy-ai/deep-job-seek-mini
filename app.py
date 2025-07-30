@@ -264,17 +264,26 @@ def create_interface():
                     interactive=False,
                     max_lines=2
                 )
+            
+            with gr.Column(scale=2):
+                resume_output = gr.JSON(
+                    label="📄 Generated Resume (JSON Resume Schema)",
+                    show_label=True
+                )
+        
+        gr.Markdown("---") # Separator for the new section
 
-                gr.Markdown("---") # Separator
-
+        with gr.Row():
+            with gr.Column(scale=1):
+                gr.Markdown("## 📄 Your Original Resume")
                 original_resume_input = gr.Textbox(
-                    label="📄 Original Resume (Plaintext, Markdown, or JSON)",
+                    label="Original Resume (Plaintext, Markdown, or JSON)",
                     placeholder="Paste your original resume here...",
-                    lines=5, # Reduced lines for better visibility
-                    max_lines=10 # Reduced max_lines
+                    lines=10,
+                    max_lines=20
                 )
 
-                with gr.Row(): # Group buttons in a row
+                with gr.Row():
                     update_resume_btn = gr.Button(
                         "⬆️ Update Original Resume",
                         variant="secondary",
@@ -284,12 +293,6 @@ def create_interface():
                         value="Clear Resume Input",
                         components=[original_resume_input]
                     )
-                
-            with gr.Column(scale=2):
-                resume_output = gr.JSON(
-                    label="📄 Generated Resume (JSON Resume Schema)",
-                    show_label=True
-                )
         
         # Examples
         gr.Markdown("## 💡 Example Job Descriptions")
