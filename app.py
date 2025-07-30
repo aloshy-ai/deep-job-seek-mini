@@ -14,10 +14,17 @@ import torch
 from resume_data import RESUME_DATABASE
 from utils import build_resume_json, extract_key_requirements
 
-# Initialize models
-@gr.cache
+# Global model cache
+_models_cache = None
+
 def load_models():
     """Load and cache HuggingFace models"""
+    global _models_cache
+    
+    if _models_cache is not None:
+        return _models_cache
+    
+    print("🔄 Loading AI models...")
     
     # Embedding model for similarity search
     embedding_model = SentenceTransformer('BAAI/bge-small-en-v1.5')
@@ -33,7 +40,10 @@ def load_models():
         pad_token_id=50256
     )
     
-    return embedding_model, generator
+    _models_cache = (embedding_model, generator)
+    print("✅ Models loaded successfully!")
+    
+    return _models_cache
 
 def find_relevant_experience(job_description, embedding_model, top_k=5):
     """Find most relevant resume experiences using semantic search"""
